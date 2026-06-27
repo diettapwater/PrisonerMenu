@@ -1,0 +1,26 @@
+<Module>
+  <Name value="Prisoner Menu"/>
+  <Id value="PrisonerMenu"/>
+  <Version value="v1.0.0"/>
+  <DefaultModule value="false"/>
+  <ModuleCategory value="Singleplayer"/>
+  <ModuleType value="Community"/>
+  <Url value=""/>
+  <DependedModules>
+    <DependedModule Id="Native"/>
+    <DependedModule Id="SandBoxCore"/>
+    <DependedModule Id="Sandbox"/>
+    <DependedModule Id="StoryMode" Optional="true"/>
+    <DependedModule Id="CustomBattle" Optional="true"/>
+    <DependedModule Id="Bannerlord.Harmony"/>
+  </DependedModules>
+  <SubModules>
+    <SubModule>
+      <Name value="PrisonerMenu"/>
+      <DLLName value="PrisonerMenu.dll"/>
+      <SubModuleClassType value="PrisonerMenu.SubModule"/>
+      <Assemblies/>
+    </SubModule>
+  </SubModules>
+  <Xmls/>
+</Module>

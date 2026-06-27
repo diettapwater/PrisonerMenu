@@ -1,0 +1,83 @@
+========================================================================================
+PRISONER MENU — NexusMods Description (paste into the Description tab, BBCode enabled)
+========================================================================================
+
+[center][size=5][b]Prisoner Menu[/b][/size]
+[i]Your captivity. Your RP. Your rules.[/i][/center]
+
+[img]https://i.imgur.com/placeholder.png[/img]
+
+[size=4][b]What does this mod do?[/b][/size]
+
+When you're captured and waiting on the campaign map, press [b]F7[/b] to step into the scene — a live 3D mission populated with your captors, their soldiers, army lords, and fellow prisoners. Instead of staring at a menu, you're standing inside the castle dungeon or out in the field camp surrounded by the people who hold you.
+
+The main purpose is immersive RP and [b]ChatAI group conversations[/b]: once inside you can open ChatAI's group menu (Alt+H / G) and have the captor lord, guards, companions, and other prisoners all talk to each other at once.
+
+[size=4][b]Press F7 on the campaign map while captured[/b][/size]
+
+[list]
+[*][b]Held in a castle or town[/b] → Dungeon scene opens. You spawn inside a cell. Captor lords and visiting nobles walk the hallway outside, reachable through the bars.
+[*][b]Held by a mobile party on the map[/b] → Outdoor camp scene opens. Your captors, their army companions, up to 6 troop guards, and fellow prisoners all appear in battle gear around you.
+[/list]
+
+[size=4][b]Who shows up in your camp scene[/b][/size]
+
+[list]
+[*]All heroes in the captor's direct party
+[*]Lords from any army the captor belongs to
+[*]Heroes and lord parties tracked in [url=https://www.nexusmods.com/mountandblade2bannerlord]FollowAll[/url] (soft dependency — works fine without it)
+[*]Up to 6 troop soldiers as camp guards
+[*]Other imprisoned heroes
+[/list]
+
+[size=4][b]Ransom suppression[/b][/size]
+
+Vanilla's automatic ransom system gets in the way of long-form RP. This mod disables it entirely for the player:
+
+[list]
+[*]The AI will never queue a ransom decision for you
+[*]The ransom offer panel never appears
+[*]No code path can actually execute a ransom release on the player
+[*]The "Propose ransom" option in the standard captivity menu is disabled with a tooltip
+[/list]
+
+NPC lords ransoming [i]each other[/i] is completely unaffected. Only your character is protected.
+
+[size=4][b]Requirements[/b][/size]
+
+[list]
+[*][url=https://www.nexusmods.com/mountandblade2bannerlord/mods/2006]Bannerlord.Harmony[/url] — must be enabled and loaded above this mod
+[/list]
+
+[size=4][b]Optional (but recommended)[/b][/size]
+
+[list]
+[*][b]ChatAI[/b] — the main intended use case; group AI conversations in the spawned scene
+[*][b]FollowAll[/b] — any heroes you're tracking will automatically appear in the camp scene
+[/list]
+
+[size=4][b]Installation[/b][/size]
+
+[list=1]
+[*]Extract so that [font=Courier New]PrisonerMenu/[/font] sits inside your [font=Courier New]Modules/[/font] folder
+[*]Enable [b]Bannerlord.Harmony[/b] in the launcher (load it above Prisoner Menu)
+[*]Enable [b]Prisoner Menu[/b] in the launcher
+[*]Load your save, get captured, open the campaign map, press [b]F7[/b]
+[/list]
+
+Safe to add or remove mid-campaign — no save data is written.
+
+[size=4][b]Compatibility[/b][/size]
+
+[list]
+[*]No XML edits — no load-order conflicts with other mods
+[*]Does not touch combat, economy, diplomacy, or any gameplay system
+[*]Ransom patches are narrowly scoped to [font=Courier New]Hero.MainHero[/font] only
+[*]Works alongside AI Influence, AliceMM, ChatAI, FollowAll, and Player Switcher
+[/list]
+
+[size=4][b]Source Code[/b][/size]
+
+Available on GitHub (link in the Files section). Built with .NET 4.7.2 / C#, no external NuGet packages — all dependencies come from your game install.
+
+[size=2][i]Developed alongside ChatAI and FollowAll for a full Bannerlord NPC relationship RP setup.[/i][/size]
