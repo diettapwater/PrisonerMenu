@@ -1,6 +1,6 @@
 <Module>
-  <Name value="Prisoner Menu"/>
-  <Id value="PrisonerMenu"/>
+  <Name value="Imprisoned"/>
+  <Id value="Imprisoned"/>
   <Version value="v1.0.0"/>
   <DefaultModule value="false"/>
   <ModuleCategory value="Singleplayer"/>
@@ -16,9 +16,9 @@
   </DependedModules>
   <SubModules>
     <SubModule>
-      <Name value="PrisonerMenu"/>
-      <DLLName value="PrisonerMenu.dll"/>
-      <SubModuleClassType value="PrisonerMenu.SubModule"/>
+      <Name value="Imprisoned"/>
+      <DLLName value="Imprisoned.dll"/>
+      <SubModuleClassType value="Imprisoned.SubModule"/>
       <Assemblies/>
     </SubModule>
   </SubModules>

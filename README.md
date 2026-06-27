@@ -1,4 +1,4 @@
-# Prisoner Menu — Bannerlord RP Mod
+# Imprisoned — Bannerlord RP Mod
 
 A Mount & Blade II Bannerlord mod that gives captured heroes an active role instead of a passive wait screen. When imprisoned — whether in a castle dungeon or a mobile lord's camp — press **F7** on the campaign map to enter a live 3D scene with your captors, their soldiers, and fellow prisoners.
 

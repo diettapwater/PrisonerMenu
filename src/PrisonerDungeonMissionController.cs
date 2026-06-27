@@ -7,7 +7,7 @@ using TaleWorlds.Engine;
 using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
 
-namespace PrisonerMenu
+namespace Imprisoned
 {
     /// <summary>
     /// Mission logic for the prisoner dungeon scene.

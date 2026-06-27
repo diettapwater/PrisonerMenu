@@ -6,11 +6,11 @@ using TaleWorlds.Core;
 using TaleWorlds.InputSystem;
 using TaleWorlds.MountAndBlade;
 
-namespace PrisonerMenu
+namespace Imprisoned
 {
     public class SubModule : MBSubModuleBase
     {
-        private static readonly Harmony _harmony = new Harmony("com.prisonermenu.mod");
+        private static readonly Harmony _harmony = new Harmony("com.imprisoned.mod");
         private bool _wasF7Pressed;
 
         protected override void OnSubModuleLoad()

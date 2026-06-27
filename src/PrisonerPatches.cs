@@ -4,7 +4,7 @@ using TaleWorlds.CampaignSystem.GameMenus;
 using TaleWorlds.CampaignSystem.Settlements.Locations;
 using TaleWorlds.Localization;
 
-namespace PrisonerMenu
+namespace Imprisoned
 {
     // Patch implementations — applied manually in SubModule so a missing method
     // is caught and skipped rather than crashing PatchAll() at startup.

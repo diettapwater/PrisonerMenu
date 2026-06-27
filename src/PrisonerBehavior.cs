@@ -23,7 +23,7 @@ using TaleWorlds.MountAndBlade.GauntletUI.Mission.Singleplayer;
 using TaleWorlds.MountAndBlade.Source.Missions;
 using TaleWorlds.MountAndBlade.View.MissionViews;
 
-namespace PrisonerMenu
+namespace Imprisoned
 {
     /// <summary>
     /// Core PrisonerMenu behavior.

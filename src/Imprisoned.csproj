@@ -4,8 +4,8 @@
     <TargetFramework>net472</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
-    <RootNamespace>PrisonerMenu</RootNamespace>
-    <AssemblyName>PrisonerMenu</AssemblyName>
+    <RootNamespace>Imprisoned</RootNamespace>
+    <AssemblyName>Imprisoned</AssemblyName>
     <OutputPath>..\bin\Win64_Shipping_Client\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <BannerlordDir Condition="'$(BANNERLORD_GAME_DIR)' != ''">$(BANNERLORD_GAME_DIR)</BannerlordDir>
