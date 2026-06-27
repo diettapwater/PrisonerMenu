@@ -7,20 +7,55 @@ using TaleWorlds.Core;
 using TaleWorlds.Engine;
 using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
+using TaleWorlds.ObjectSystem;
 
 namespace Imprisoned
 {
     /// <summary>
     /// Mission logic for the prisoner camp scene.
+    ///
     /// Spawns the player, captor heroes, troop guards, and fellow prisoners manually —
     /// no MissionAgentHandler, so the prison roster state doesn't crash agent setup.
-    /// Modeled after CouncilOfWar's CouncilMissionController.
+    ///
+    /// Player and fellow prisoners wear stripped prisoner rags (burlap/hemp tunic).
+    /// Captors and guards wear their full battle gear.
+    ///
+    /// Attempts to place a dungeon cell prefab at the scene center as a makeshift
+    /// cage; falls back to four fence panels if that prefab isn't loaded; falls back
+    /// to open terrain if neither loads — scene still functions either way.
     /// </summary>
     public class PrisonerCampMissionController : MissionLogic
     {
         private const BodyFlags GroundFlags = (BodyFlags)544321929;
-        private const float HeroRadius  = 3.5f;
-        private const float TroopRadius = 6.5f;
+        private const float HeroRadius  = 4.0f;
+        private const float TroopRadius = 7.0f;
+
+        // Prefabs tried in order for the cage.  First one that instantiates wins.
+        private static readonly string[] CagePrefabs =
+        {
+            "battania_dungeon_cell_a",
+            "aserai_dungeon_cell_bars_closed",
+            "aserai_dungeon_cells_a",
+        };
+
+        // Fallback fence prefabs used to build a 4-sided pen if no cell loads.
+        private static readonly string[] FencePrefabs =
+        {
+            "fence_empire_b",
+            "fence_empire_a",
+            "fence_empire_c",
+        };
+
+        // Body items tried in order for prisoner rags.  First one found in the
+        // object manager is used; if none are found the prisoner wears their
+        // civilian outfit (graceful degradation).
+        private static readonly string[] RagItemIds =
+        {
+            "burlap_sack_dress",
+            "hemp_tunic",
+            "long_hemp_tunic",
+            "peasant_costume",
+        };
 
         private readonly List<Hero> _captorHeroes;
         private readonly List<Hero> _fellowPrisoners;
@@ -40,7 +75,10 @@ namespace Imprisoned
         {
             base.AfterStart();
             Mission.SetMissionMode(MissionMode.Stealth, true);
-            SpawnAll();
+
+            Vec3 center = GetSceneCenter();
+            TryPlaceCage(center);
+            SpawnAll(center);
         }
 
         public override InquiryData OnEndMissionRequest(out bool canPlayerLeave)
@@ -50,36 +88,106 @@ namespace Imprisoned
             return null!;
         }
 
+        // ── Cage placement ────────────────────────────────────────────────────
+
+        private void TryPlaceCage(Vec3 center)
+        {
+            // Try cell prefabs first.
+            foreach (var prefab in CagePrefabs)
+            {
+                try
+                {
+                    var cell = GameEntity.Instantiate(Mission.Scene, prefab, true, true);
+                    if (cell == null) continue;
+                    var frame = new MatrixFrame(Mat3.Identity, center);
+                    cell.SetGlobalFrame(in frame);
+                    return;
+                }
+                catch { }
+            }
+
+            // Fallback: assemble a rough square pen from fence panels.
+            TryBuildFencePen(center, 2.8f);
+        }
+
+        private void TryBuildFencePen(Vec3 center, float halfSize)
+        {
+            string? fence = null;
+            GameEntity? first = null;
+
+            foreach (var prefab in FencePrefabs)
+            {
+                try
+                {
+                    first = GameEntity.Instantiate(Mission.Scene, prefab, true, true);
+                    if (first != null) { fence = prefab; break; }
+                }
+                catch { }
+            }
+
+            if (fence == null) return;
+
+            // North side (first panel already created above)
+            PlaceFencePanel(first!, center, 0f, halfSize, true);
+
+            // South, East, West
+            for (int i = 1; i < 4; i++)
+            {
+                float angle = i * MathF.PI * 0.5f;
+                try
+                {
+                    var panel = GameEntity.Instantiate(Mission.Scene, fence, true, true);
+                    if (panel != null) PlaceFencePanel(panel, center, angle, halfSize, false);
+                }
+                catch { }
+            }
+        }
+
+        private void PlaceFencePanel(GameEntity panel, Vec3 center,
+            float yawRadians, float halfSize, bool isNorth)
+        {
+            // Offset direction from center: north = +Y, east = +X, etc.
+            float cos = MathF.Cos(yawRadians);
+            float sin = MathF.Sin(yawRadians);
+            var offset = new Vec3(sin * halfSize, cos * halfSize, 0f);
+            Vec3 pos = center + offset;
+            pos.z = Mission.Scene.GetGroundHeightAtPosition(pos, GroundFlags);
+
+            var rot = Mat3.Identity;
+            rot.RotateAboutUp(yawRadians);
+            var frame = new MatrixFrame(rot, pos);
+            panel.SetGlobalFrame(in frame);
+        }
+
         // ── Spawning ──────────────────────────────────────────────────────────
 
-        private void SpawnAll()
+        private void SpawnAll(Vec3 center)
         {
             var captorParty = Hero.MainHero.PartyBelongedToAsPrisoner ?? PartyBase.MainParty;
-            Vec3 center = GetSceneCenter();
 
-            // Player at the center.
+            // Player at the center — stripped to rags.
             SpawnHero(Hero.MainHero, center, Vec2.Forward,
-                AgentControllerType.Player, PartyBase.MainParty);
+                AgentControllerType.Player, PartyBase.MainParty, isPrisoner: true);
 
-            // ── Captor heroes — front semicircle ─────────────────────────────
+            // ── Captor heroes — front semicircle, full battle gear ────────────
             int captorCount = _captorHeroes.Count;
             for (int i = 0; i < captorCount; i++)
             {
                 Vec3 pos = GetArcPos(center, i, captorCount, HeroRadius, 0f);
                 SpawnHero(_captorHeroes[i], pos, FaceToward(pos, center),
-                    AgentControllerType.AI, captorParty);
+                    AgentControllerType.AI, captorParty, isPrisoner: false);
             }
 
-            // ── Fellow prisoners — back semicircle ───────────────────────────
+            // ── Fellow prisoners — back semicircle, also in rags ─────────────
             int prisonerCount = _fellowPrisoners.Count;
             for (int i = 0; i < prisonerCount; i++)
             {
                 Vec3 pos = GetArcPos(center, i, prisonerCount, HeroRadius, MathF.PI);
                 SpawnHero(_fellowPrisoners[i], pos, FaceToward(pos, center),
-                    AgentControllerType.AI, captorParty);
+                    AgentControllerType.AI, captorParty, isPrisoner: true);
             }
 
-            // ── Troop guards — wider ring ────────────────────────────────────
+            // ── Troop guards — wider ring, battle gear ────────────────────────
             int troopTotal = _troopGuards.Sum(g => g.Count);
             if (troopTotal > 0)
             {
@@ -96,7 +204,7 @@ namespace Imprisoned
         }
 
         private void SpawnHero(Hero hero, Vec3 pos, Vec2 dir,
-            AgentControllerType ctrl, PartyBase party, bool civilian = false)
+            AgentControllerType ctrl, PartyBase party, bool isPrisoner)
         {
             try
             {
@@ -104,13 +212,24 @@ namespace Imprisoned
                     .InitialPosition(in pos)
                     .InitialDirection(in dir)
                     .NoHorses(true)
-                    .CivilianEquipment(civilian)
                     .TroopOrigin(new PartyAgentOrigin(
                         party, hero.CharacterObject, -1, default, false, false))
                     .Controller(ctrl);
 
-                var agent = Mission.SpawnAgent(bd, false);
+                if (isPrisoner)
+                {
+                    var rags = BuildPrisonerEquipment();
+                    if (rags != null)
+                        bd = bd.Equipment(rags);
+                    else
+                        bd = bd.CivilianEquipment(true);
+                }
+                else
+                {
+                    bd = bd.CivilianEquipment(false); // battle gear
+                }
 
+                var agent = Mission.SpawnAgent(bd, false);
                 if (agent != null && ctrl == AgentControllerType.AI)
                 {
                     agent.AddComponent(new CommonAIComponent(agent));
@@ -128,13 +247,12 @@ namespace Imprisoned
                     .InitialPosition(in pos)
                     .InitialDirection(in dir)
                     .NoHorses(true)
-                    .CivilianEquipment(false)
+                    .CivilianEquipment(false) // battle gear for guards
                     .TroopOrigin(new PartyAgentOrigin(
                         party, character, -1, default, false, false))
                     .Controller(AgentControllerType.AI);
 
                 var agent = Mission.SpawnAgent(bd, false);
-
                 if (agent != null)
                 {
                     agent.AddComponent(new CommonAIComponent(agent));
@@ -142,6 +260,31 @@ namespace Imprisoned
                 }
             }
             catch { }
+        }
+
+        // ── Prisoner equipment ────────────────────────────────────────────────
+
+        /// <summary>
+        /// Builds a minimal equipment set — just a ragged body piece, nothing else.
+        /// Returns null if no suitable item is found (caller falls back to civilian gear).
+        /// </summary>
+        private static Equipment? BuildPrisonerEquipment()
+        {
+            try
+            {
+                foreach (var id in RagItemIds)
+                {
+                    var item = MBObjectManager.Instance.GetObject<ItemObject>(id);
+                    if (item == null) continue;
+
+                    var eq = new Equipment(Equipment.EquipmentType.Battle);
+                    eq.AddEquipmentToSlotWithoutAgent(
+                        EquipmentIndex.Body, new EquipmentElement(item));
+                    return eq;
+                }
+            }
+            catch { }
+            return null;
         }
 
         // ── Geometry helpers ──────────────────────────────────────────────────
@@ -154,10 +297,6 @@ namespace Imprisoned
             return c;
         }
 
-        /// <summary>
-        /// Places <paramref name="total"/> slots in a semicircle of <paramref name="radius"/>
-        /// centred on <paramref name="baseAngle"/>.
-        /// </summary>
         private Vec3 GetArcPos(Vec3 center, int index, int total,
             float radius, float baseAngle)
         {

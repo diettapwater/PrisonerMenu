@@ -6,16 +6,19 @@ using TaleWorlds.Core;
 using TaleWorlds.Engine;
 using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
+using TaleWorlds.ObjectSystem;
 
 namespace Imprisoned
 {
     /// <summary>
     /// Mission logic for the prisoner dungeon scene.
     ///
-    /// Tries to spawn the player at a cell-interior spawn point (any scene entity
-    /// whose name contains "prisoner") so they appear behind bars.  Captor lords
-    /// and fellow hero-prisoners are spawned in the general dungeon area at offset
-    /// positions so they can be interacted with via ChatAI (Alt+H / G etc.).
+    /// Player and fellow prisoners spawn in rags (burlap/hemp tunic, no armor).
+    /// Captor lords and visiting nobles spawn in their civilian clothes.
+    ///
+    /// Player is placed at a cell-interior spawn point (any entity whose name
+    /// contains "prisoner") so they appear behind bars.  Captor lords are scattered
+    /// in the hallway outside.
     ///
     /// Uses MissionState.OpenNew (no MissionAgentHandler) — safe even when the
     /// player is in a prison roster.
@@ -24,6 +27,14 @@ namespace Imprisoned
     {
         private const BodyFlags GroundFlags = (BodyFlags)544321929;
         private const float OuterRadius = 4.0f;
+
+        private static readonly string[] RagItemIds =
+        {
+            "burlap_sack_dress",
+            "hemp_tunic",
+            "long_hemp_tunic",
+            "peasant_costume",
+        };
 
         private readonly List<Hero> _captorLords;
         private readonly List<Hero> _fellowPrisoners;
@@ -56,46 +67,49 @@ namespace Imprisoned
             var captorParty = Hero.MainHero.PartyBelongedToAsPrisoner ?? PartyBase.MainParty;
             Vec3 center = GetSceneCenter();
 
-            // ── Player — try to land inside a cell ───────────────────────────
+            // ── Player — try to land inside a cell, stripped to rags ─────────
             var cellEntity = FindPrisonerSpawnEntity();
             if (cellEntity != null)
-                SpawnHeroAtEntity(Hero.MainHero, cellEntity, AgentControllerType.Player, PartyBase.MainParty, civilian: true);
+                SpawnHeroAtEntity(Hero.MainHero, cellEntity,
+                    AgentControllerType.Player, PartyBase.MainParty, isPrisoner: true);
             else
-                SpawnHero(Hero.MainHero, center, Vec2.Forward, AgentControllerType.Player, PartyBase.MainParty, civilian: true);
+                SpawnHero(Hero.MainHero, center, Vec2.Forward,
+                    AgentControllerType.Player, PartyBase.MainParty, isPrisoner: true);
 
-            // ── Captor lords — scatter around the dungeon center ─────────────
+            // ── Captor lords — scatter in hallway outside cell, civilian clothes
             int captorCount = _captorLords.Count;
             for (int i = 0; i < captorCount; i++)
             {
                 Vec3 pos = GetArcPos(center, i, captorCount, OuterRadius, 0f);
                 SpawnHero(_captorLords[i], pos, FaceToward(pos, center),
-                    AgentControllerType.AI, captorParty, civilian: true);
+                    AgentControllerType.AI, captorParty, isPrisoner: false);
             }
 
-            // ── Fellow prisoners — near the player, slightly offset ──────────
+            // ── Fellow prisoners — near the player, also in rags ─────────────
             int prisonerCount = _fellowPrisoners.Count;
             for (int i = 0; i < prisonerCount; i++)
             {
                 Vec3 pos = GetArcPos(center, i, prisonerCount, OuterRadius * 0.5f, MathF.PI);
                 SpawnHero(_fellowPrisoners[i], pos, FaceToward(pos, center),
-                    AgentControllerType.AI, captorParty, civilian: true);
+                    AgentControllerType.AI, captorParty, isPrisoner: true);
             }
         }
 
         // ── Spawn helpers ─────────────────────────────────────────────────────
 
         private void SpawnHeroAtEntity(Hero hero, GameEntity entity,
-            AgentControllerType ctrl, PartyBase party, bool civilian)
+            AgentControllerType ctrl, PartyBase party, bool isPrisoner)
         {
             try
             {
                 var bd = new AgentBuildData(hero.CharacterObject)
                     .InitialFrameFromSpawnPointEntity(entity)
                     .NoHorses(true)
-                    .CivilianEquipment(civilian)
                     .TroopOrigin(new PartyAgentOrigin(
                         party, hero.CharacterObject, -1, default, false, false))
                     .Controller(ctrl);
+
+                ApplyEquipment(ref bd, isPrisoner);
 
                 var agent = Mission.SpawnAgent(bd, false);
                 if (agent != null && ctrl == AgentControllerType.AI)
@@ -108,7 +122,7 @@ namespace Imprisoned
         }
 
         private void SpawnHero(Hero hero, Vec3 pos, Vec2 dir,
-            AgentControllerType ctrl, PartyBase party, bool civilian)
+            AgentControllerType ctrl, PartyBase party, bool isPrisoner)
         {
             try
             {
@@ -116,10 +130,11 @@ namespace Imprisoned
                     .InitialPosition(in pos)
                     .InitialDirection(in dir)
                     .NoHorses(true)
-                    .CivilianEquipment(civilian)
                     .TroopOrigin(new PartyAgentOrigin(
                         party, hero.CharacterObject, -1, default, false, false))
                     .Controller(ctrl);
+
+                ApplyEquipment(ref bd, isPrisoner);
 
                 var agent = Mission.SpawnAgent(bd, false);
                 if (agent != null && ctrl == AgentControllerType.AI)
@@ -131,18 +146,49 @@ namespace Imprisoned
             catch { }
         }
 
+        private static void ApplyEquipment(ref AgentBuildData bd, bool isPrisoner)
+        {
+            if (isPrisoner)
+            {
+                var rags = BuildPrisonerEquipment();
+                if (rags != null)
+                    bd = bd.Equipment(rags);
+                else
+                    bd = bd.CivilianEquipment(true);
+            }
+            else
+            {
+                bd = bd.CivilianEquipment(true); // lords in dungeon = visiting clothes
+            }
+        }
+
+        // ── Prisoner equipment ────────────────────────────────────────────────
+
+        private static Equipment? BuildPrisonerEquipment()
+        {
+            try
+            {
+                foreach (var id in RagItemIds)
+                {
+                    var item = MBObjectManager.Instance.GetObject<ItemObject>(id);
+                    if (item == null) continue;
+
+                    var eq = new Equipment(Equipment.EquipmentType.Battle);
+                    eq.AddEquipmentToSlotWithoutAgent(
+                        EquipmentIndex.Body, new EquipmentElement(item));
+                    return eq;
+                }
+            }
+            catch { }
+            return null;
+        }
+
         // ── Scene entity search ───────────────────────────────────────────────
 
-        /// <summary>
-        /// Scans all scene entities for one whose name suggests a prisoner spawn
-        /// point (e.g. "sp_prisoner", "prisoner_spawn_point", etc.).
-        /// Returns null if none found — caller falls back to scene center.
-        /// </summary>
         private GameEntity? FindPrisonerSpawnEntity()
         {
             try
             {
-                // Direct name lookups first (fast path)
                 string[] knownNames = {
                     "sp_prisoner", "sp_prison_prisoner", "prisoner_spawn",
                     "sp_prisoner_side", "prisoner_spawn_point"
@@ -157,7 +203,6 @@ namespace Imprisoned
                     catch { }
                 }
 
-                // Full scan — any entity whose name contains "prisoner"
                 var all = new List<GameEntity>();
                 Mission.Scene.GetEntities(ref all);
                 foreach (var e in all)
