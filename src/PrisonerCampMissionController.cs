@@ -19,10 +19,6 @@ namespace Imprisoned
     ///
     /// Player and fellow prisoners wear stripped prisoner rags (burlap/hemp tunic).
     /// Captors and guards wear their full battle gear.
-    ///
-    /// Attempts to place a dungeon cell prefab at the scene center as a makeshift
-    /// cage; falls back to four fence panels if that prefab isn't loaded; falls back
-    /// to open terrain if neither loads — scene still functions either way.
     /// </summary>
     public class PrisonerCampMissionController : MissionLogic
     {
@@ -30,25 +26,6 @@ namespace Imprisoned
         private const float HeroRadius  = 4.0f;
         private const float TroopRadius = 7.0f;
 
-        // Prefabs tried in order for the cage.  First one that instantiates wins.
-        private static readonly string[] CagePrefabs =
-        {
-            "battania_dungeon_cell_a",
-            "aserai_dungeon_cell_bars_closed",
-            "aserai_dungeon_cells_a",
-        };
-
-        // Fallback fence prefabs used to build a 4-sided pen if no cell loads.
-        private static readonly string[] FencePrefabs =
-        {
-            "fence_empire_b",
-            "fence_empire_a",
-            "fence_empire_c",
-        };
-
-        // Body items tried in order for prisoner rags.  First one found in the
-        // object manager is used; if none are found the prisoner wears their
-        // civilian outfit (graceful degradation).
         private static readonly string[] RagItemIds =
         {
             "burlap_sack_dress",
@@ -77,7 +54,6 @@ namespace Imprisoned
             Mission.SetMissionMode(MissionMode.Stealth, true);
 
             Vec3 center = GetSceneCenter();
-            TryPlaceCage(center);
             SpawnAll(center);
         }
 
@@ -86,77 +62,6 @@ namespace Imprisoned
             canPlayerLeave = true;
             PrisonerBehavior.OnExitScene();
             return null!;
-        }
-
-        // ── Cage placement ────────────────────────────────────────────────────
-
-        private void TryPlaceCage(Vec3 center)
-        {
-            // Try cell prefabs first.
-            foreach (var prefab in CagePrefabs)
-            {
-                try
-                {
-                    var cell = GameEntity.Instantiate(Mission.Scene, prefab, true, true);
-                    if (cell == null) continue;
-                    var frame = new MatrixFrame(Mat3.Identity, center);
-                    cell.SetGlobalFrame(in frame);
-                    return;
-                }
-                catch { }
-            }
-
-            // Fallback: assemble a rough square pen from fence panels.
-            TryBuildFencePen(center, 2.8f);
-        }
-
-        private void TryBuildFencePen(Vec3 center, float halfSize)
-        {
-            string? fence = null;
-            GameEntity? first = null;
-
-            foreach (var prefab in FencePrefabs)
-            {
-                try
-                {
-                    first = GameEntity.Instantiate(Mission.Scene, prefab, true, true);
-                    if (first != null) { fence = prefab; break; }
-                }
-                catch { }
-            }
-
-            if (fence == null) return;
-
-            // North side (first panel already created above)
-            PlaceFencePanel(first!, center, 0f, halfSize, true);
-
-            // South, East, West
-            for (int i = 1; i < 4; i++)
-            {
-                float angle = i * MathF.PI * 0.5f;
-                try
-                {
-                    var panel = GameEntity.Instantiate(Mission.Scene, fence, true, true);
-                    if (panel != null) PlaceFencePanel(panel, center, angle, halfSize, false);
-                }
-                catch { }
-            }
-        }
-
-        private void PlaceFencePanel(GameEntity panel, Vec3 center,
-            float yawRadians, float halfSize, bool isNorth)
-        {
-            // Offset direction from center: north = +Y, east = +X, etc.
-            float cos = MathF.Cos(yawRadians);
-            float sin = MathF.Sin(yawRadians);
-            var offset = new Vec3(sin * halfSize, cos * halfSize, 0f);
-            Vec3 pos = center + offset;
-            pos.z = Mission.Scene.GetGroundHeightAtPosition(pos, GroundFlags);
-
-            var rot = Mat3.Identity;
-            rot.RotateAboutUp(yawRadians);
-            var frame = new MatrixFrame(rot, pos);
-            panel.SetGlobalFrame(in frame);
         }
 
         // ── Spawning ──────────────────────────────────────────────────────────

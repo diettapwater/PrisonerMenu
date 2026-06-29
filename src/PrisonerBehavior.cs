@@ -211,8 +211,7 @@ namespace Imprisoned
             var captorParty = Hero.MainHero.PartyBelongedToAsPrisoner!;
             var captor = captorParty.MobileParty!;
 
-            string sceneName = Campaign.Current.Models.SceneModel
-                .GetConversationSceneForMapPosition(captor.Position);
+            string sceneName = GetCampSceneForPosition(captor.Position);
             if (string.IsNullOrEmpty(sceneName)) { Fail(); return; }
 
             var captorHeroes    = new List<Hero>();
@@ -318,6 +317,29 @@ namespace Imprisoned
                 }
             }
             catch { }
+        }
+
+        // Prefer a terrain-matched battle scene (large open outdoor terrain) over the
+        // tiny floating conversation platform that GetConversationSceneForMapPosition
+        // returns.  Uses reflection so we degrade gracefully if the method doesn't
+        // exist on older/newer versions.
+        private static string GetCampSceneForPosition(CampaignVec2 position)
+        {
+            try
+            {
+                var sceneModel = Campaign.Current.Models.SceneModel;
+                var m = AccessTools.Method(sceneModel.GetType(), "GetBattleSceneForMapPosition");
+                if (m != null)
+                {
+                    var s = m.Invoke(sceneModel, new object[] { position }) as string;
+                    if (!string.IsNullOrEmpty(s)) return s;
+                }
+            }
+            catch { }
+
+            // Last resort: the conversation scene (small, but functional)
+            return Campaign.Current.Models.SceneModel
+                .GetConversationSceneForMapPosition(position) ?? "";
         }
 
         private static MissionBehavior[] GetCampBehaviors(
